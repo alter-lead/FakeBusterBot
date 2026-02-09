@@ -3,7 +3,9 @@ stages:
 
 variables:
   PYTHONUNBUFFERED: "1"
+  DEPLOY_ENV: "test"  # по умолчанию тестовый стенд
 
+# Джоба для проверки backend и bot
 test_backend_and_bot:
   stage: test
   image: python:3.11
@@ -13,7 +15,21 @@ test_backend_and_bot:
     - pip install -r backend/requirements.txt
     - pip install -r bot/requirements.txt || true
   script:
+    - echo "DEPLOY_ENV = $DEPLOY_ENV"
     - echo "Проверка импорта backend"
     - python -c "import backend.app.main"
     - echo "Проверка импорта bot"
     - python -c "import bot.app.main"
+  rules:
+    # Запуск на ветке dev (dev стенд)
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      variables:
+        DEPLOY_ENV: "dev"
+    # Запуск на ветке test (тестовый стенд)
+    - if: '$CI_COMMIT_BRANCH == "test"'
+      variables:
+        DEPLOY_ENV: "test"
+    # Можно добавить продовую ветку main
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        DEPLOY_ENV: "prod"
