@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.router import api_router  # важно: без 'backend.'
+from .api.router import api_router
 
 app = FastAPI(
     title="FakeBuster API",
