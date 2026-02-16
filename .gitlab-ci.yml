@@ -2,6 +2,7 @@ stages:
   - test
   - build
   - deploy
+  - verify
 
 variables:
   PYTHONUNBUFFERED: "1"
@@ -38,7 +39,7 @@ test_backend_and_bot:
 # =========================
 # BUILD STAGE
 # =========================
-build_docker_image:
+build_docker_images:
   stage: build
   image: docker:24
   services:
@@ -46,20 +47,42 @@ build_docker_image:
   variables:
     DOCKER_DRIVER: overlay2
   script:
-    - docker build -t fakebuster-bot:$CI_COMMIT_SHORT_SHA .
+    - docker build -t fakebuster-backend:$CI_COMMIT_SHORT_SHA backend/
+    - docker build -t fakebuster-bot:$CI_COMMIT_SHORT_SHA bot/
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_COMMIT_BRANCH == "test"'
     - if: '$CI_COMMIT_BRANCH == "main"'
 
 # =========================
-# DEPLOY STAGE (manual)
+# DEPLOY STAGE
 # =========================
-deploy:
+deploy_to_kubernetes:
   stage: deploy
+  image: bitnami/kubectl:latest
   script:
-    - echo "Запуск деплоя в окружение $DEPLOY_ENV"
-    - echo "Здесь может быть kubectl apply -f k8s/"
-  when: manual
+    # создаём временный kubeconfig из Base64 переменной
+    - echo "$KUBE_CONFIG_B64" | base64 -d > /tmp/kubeconfig
+    - kubectl --kubeconfig /tmp/kubeconfig apply -f k8s/backend-deployment.yaml
+    - kubectl --kubeconfig /tmp/kubeconfig apply -f k8s/bot-deployment.yaml
+    - kubectl --kubeconfig /tmp/kubeconfig rollout status deployment backend-deployment
+    - kubectl --kubeconfig /tmp/kubeconfig rollout status deployment bot-deployment
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "test"'
+  when: manual  # можно оставить manual, если QA хочет запускать кнопкой
+
+# =========================
+# VERIFY STAGE
+# =========================
+verify_deploy:
+  stage: verify
+  image: curlimages/curl:latest
+  script:
+    - echo "Проверка Swagger /docs"
+    - curl -f http://backend-service:8000/docs || exit 1
+    - echo "Проверка Telegram Bot API"
+    - curl -f https://api.telegram.org/bot$TELEGRAM_TOKEN/getMe || exit 1
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "test"'
