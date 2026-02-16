@@ -57,16 +57,14 @@ build_docker_image:
 # =========================
 deploy:
   stage: deploy
-  image: bitnami/kubectl:latest   # образ с shell + kubectl
+  image: lachlanevenson/k8s-kubectl:latest
   script:
-    # Раскодируем kubeconfig
-    - echo "$KUBE_CONFIG_B64" | base64 -d > kubeconfig.yaml
-    # Деплой backend и bot
-    - kubectl --kubeconfig kubeconfig.yaml apply -f k8s/backend-deployment.yaml
-    - kubectl --kubeconfig kubeconfig.yaml apply -f k8s/bot-deployment.yaml
-    # Проверка pod
-    - kubectl --kubeconfig kubeconfig.yaml get pods -n default
-  when: manual
+    # Декодируем kubeconfig
+    - echo "$KUBE_CONFIG_B64" | base64 -d > kubeconfig
+    # Проверяем доступ к кластеру
+    - kubectl --kubeconfig=kubeconfig get nodes
+    # Применяем все манифесты
+    - kubectl --kubeconfig=kubeconfig apply -f k8s/
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
-    - if: '$CI_COMMIT_BRANCH == "test"'
+  when: manual
