@@ -4,12 +4,15 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from dotenv import load_dotenv
 
-# --- Явная загрузка .env ---
-load_dotenv(dotenv_path=".env")  # путь к .env
+# --- Явная загрузка .env с корректным абсолютным путём ---
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+dotenv_path = os.path.join(BASE_DIR, ".env")
+load_dotenv(dotenv_path=dotenv_path)
+
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 if not TOKEN:
-    raise ValueError("Не найден TELEGRAM_TOKEN в bot/app/.env")
+    raise ValueError("Не найден TELEGRAM_TOKEN в .env")
 
 # --- Инициализация бота и диспетчера ---
 bot = Bot(token=TOKEN)

@@ -1,0 +1,65 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  PYTHONUNBUFFERED: "1"
+  DEPLOY_ENV: "test"
+
+# =========================
+# TEST STAGE
+# =========================
+test_backend_and_bot:
+  stage: test
+  image: python:3.11
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install -r backend/requirements.txt
+    - pip install -r bot/requirements.txt || true
+  script:
+    - echo "DEPLOY_ENV = $DEPLOY_ENV"
+    - echo "Проверка импорта backend"
+    - python -c "import backend.app.main"
+    - echo "Проверка импорта bot"
+    - python -c "import bot.app.main"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      variables:
+        DEPLOY_ENV: "dev"
+    - if: '$CI_COMMIT_BRANCH == "test"'
+      variables:
+        DEPLOY_ENV: "test"
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        DEPLOY_ENV: "prod"
+
+# =========================
+# BUILD STAGE
+# =========================
+build_docker_image:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_DRIVER: overlay2
+  script:
+    - docker build -t fakebuster-bot:$CI_COMMIT_SHORT_SHA .
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "test"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# =========================
+# DEPLOY STAGE (manual)
+# =========================
+deploy:
+  stage: deploy
+  script:
+    - echo "Запуск деплоя в окружение $DEPLOY_ENV"
+    - echo "Здесь может быть kubectl apply -f k8s/"
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
