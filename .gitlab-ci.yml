@@ -60,15 +60,17 @@ build_docker_images:
 deploy:
   stage: deploy
   image: bitnami/kubectl:latest
+  entrypoint: ["/bin/bash", "-c"]   # Используем bash вместо отсутствующего shell
   script:
-    # Раскодируем kubeconfig из переменной KUBE_CONFIG_B64
+    # Раскодируем kubeconfig из переменной
     - echo "$KUBE_CONFIG_B64" | base64 -d > kubeconfig.yaml
-    # Деплой backend и bot в Kubernetes
+    # Деплой backend и bot
     - kubectl --kubeconfig kubeconfig.yaml apply -f k8s/backend-deployment.yaml
     - kubectl --kubeconfig kubeconfig.yaml apply -f k8s/bot-deployment.yaml
-    # Можно добавить проверку статуса pod
+    # Проверка pod
     - kubectl --kubeconfig kubeconfig.yaml get pods -n default
   when: manual
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_COMMIT_BRANCH == "test"'
+
