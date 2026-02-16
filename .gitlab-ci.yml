@@ -47,8 +47,10 @@ build_docker_images:
   variables:
     DOCKER_DRIVER: overlay2
   script:
-    - docker build -t fakebuster-backend:$CI_COMMIT_SHORT_SHA backend/
-    - docker build -t fakebuster-bot:$CI_COMMIT_SHORT_SHA bot/
+    # Собираем backend
+    - docker build -t fakebuster-backend:$CI_COMMIT_SHORT_SHA -f Dockerfile backend/
+    # Собираем bot
+    - docker build -t fakebuster-bot:$CI_COMMIT_SHORT_SHA -f Dockerfile bot/
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_COMMIT_BRANCH == "test"'
