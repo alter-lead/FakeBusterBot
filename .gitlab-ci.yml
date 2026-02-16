@@ -57,14 +57,21 @@ build_docker_image:
 # =========================
 deploy:
   stage: deploy
-  image: lachlanevenson/k8s-kubectl:latest
+  image: beli/kubectl-shell:latest
   script:
-    # Декодируем kubeconfig
-    - echo "$KUBE_CONFIG_B64" | base64 -d > kubeconfig
-    # Проверяем доступ к кластеру
-    - kubectl --kubeconfig=kubeconfig get nodes
-    # Применяем все манифесты
-    - kubectl --kubeconfig=kubeconfig apply -f k8s/
+    - echo "Декодируем KUBE_CONFIG_B64 и сохраняем в kubeconfig.yaml"
+    - echo "$KUBE_CONFIG_B64" | base64 -d > kubeconfig.yaml
+    - echo "Применяем конфигурацию Kubernetes"
+    - kubectl --kubeconfig=kubeconfig.yaml apply -f k8s/
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
-  when: manual
+      variables:
+        DEPLOY_ENV: "dev"
+    - if: '$CI_COMMIT_BRANCH == "test"'
+      variables:
+        DEPLOY_ENV: "test"
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        DEPLOY_ENV: "prod"
+  environment:
+    name: $DEPLOY_ENV
