@@ -57,7 +57,7 @@ build_docker_image:
 # =========================
 deploy:
   stage: deploy
-  image: lachlanevenson/k8s-kubectl:latest   # образ с sh + kubectl
+  image: bitnami/kubectl:latest   # образ с shell + kubectl
   script:
     # Раскодируем kubeconfig
     - echo "$KUBE_CONFIG_B64" | base64 -d > kubeconfig.yaml
